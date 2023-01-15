@@ -1,0 +1,50 @@
+<template>
+    <article class="slds-card">
+        <c-lwc-codes-and-tags-percent selectedcodesandtags={selectedCodesAndTags} if:true={moveToNext}>
+        </c-lwc-codes-and-tags-percent>
+        <lightning-tabset if:false={moveToNext}>
+            <lightning-tab label="Codes">
+                <div class="slds-m-top_medium slds-m-bottom_x-large">
+                    <div class="slds-p-around_medium lgc-bg">
+                        <lightning-tree-grid data={codesAndAssociatedTags} columns={codeColumns} key-field="code"
+                            onrowselection={handleSelection}>
+                        </lightning-tree-grid>
+                        <div class="demo-only" if:false={codesAndAssociatedTags} style="height:6rem;position:relative">
+                            <div class="slds-spinner_container">
+                                <div role="status" class="slds-spinner slds-spinner_medium slds-spinner_brand">
+                                    <span class="slds-assistive-text">Loading</span>
+                                    <div class="slds-spinner__dot-a"></div>
+                                    <div class="slds-spinner__dot-b"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </lightning-tab>
+            <lightning-tab label="Tags">
+                <div class="slds-m-top_medium slds-m-bottom_x-large">
+                    <div class="slds-p-around_medium lgc-bg">
+                        <lightning-tree-grid data={tagItems} columns={tagColumns} key-field="tag"
+                            onrowselection={handleSelection}>
+                        </lightning-tree-grid>
+                        <div class="demo-only" if:false={tagItems} style="height:6rem;position:relative">
+                            <div class="slds-spinner_container">
+                                <div role="status" class="slds-spinner slds-spinner_medium slds-spinner_brand">
+                                    <span class="slds-assistive-text">Loading</span>
+                                    <div class="slds-spinner__dot-a"></div>
+                                    <div class="slds-spinner__dot-b"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </lightning-tab>
+        </lightning-tabset>
+        <div class="slds-button-group" role="group">
+            <button if:true={isSelectAndNotNext} onclick={toggleNext}
+                class="slds-button slds-button_brand">Next</button>
+            <button if:true={moveToNext} onclick={togglePrevious}
+                class="slds-button slds-button_neutral">Previous</button>
+        </div>
+    </article>
+</template>
