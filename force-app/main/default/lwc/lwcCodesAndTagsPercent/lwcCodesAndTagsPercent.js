@@ -15,7 +15,9 @@ export default class LwcCodesAndTagsPercent extends LightningElement {
     @api objectname ='';
 
     countParentAndChildrenRecord(){
-        for(const instance of Array.from(selectedcodesandtags)){
+        let codesAndTagsArray = Array.from(this.selectedcodesandtags);
+        for(const instance of codesAndTagsArray[0]){
+            console.log(' this.selectedCodesAndTags Array :: :: ', JSON.stringify(Array.from(this.selectedcodesandtags)[0]));
             if(!instance.parentId){
                 this.parentCount =this.parentCount+1; 
             }

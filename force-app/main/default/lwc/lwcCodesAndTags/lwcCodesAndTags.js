@@ -129,6 +129,7 @@ export default class LwcCodesAndTags extends LightningElement {
         this.selectedCodesAndTags.add(event.detail.selectedRows);
         console.log(' this.selectedCodesAndTags :: :: ', this.selectedCodesAndTags)
         this.selectedCodesAndTagsArray = this.selectedCodesAndTags;
+       
     }
 
     toggleNext(){
