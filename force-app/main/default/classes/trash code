@@ -1,0 +1,142 @@
+   private static list<Related_codes_and_tag__c> filterTagsByParentId(string recordID){
+        id objectId = recordID;
+        String sObjName = objectId.getSObjectType().getDescribe().getName();
+        Set<String> objectFields = Schema.SObjectType.Related_codes_and_tag__c.fields.getMap().keySet();
+        Map<Id,Related_codes_and_tag__c> codeAndTagsMap = new Map<Id,Related_codes_and_tag__c>();
+        string sObjectFieldName = sObjName+'__c';
+
+        if(objectFields.contains(sObjectFieldName.toLowerCase())) {
+            string dynamicCodeAndTagsQuerry = 'SELECT id,name,related_codes_and_tag__c FROM Related_codes_and_tag__c WHERE '+sObjName+'__c =:objectId';
+
+            // get ::: The Related codes and tag
+            list<Related_codes_and_tag__c> codeAndTagsList = (List<Related_codes_and_tag__c>)DataBase.query(dynamicCodeAndTagsQuerry);
+
+            codeAndTagsMap = new map<id,Related_codes_and_tag__c>(codeAndTagsList);
+            for(Related_codes_and_tag__c instance : codeAndTagsMap.values()){
+                codeAndTagsMap.remove(instance.related_codes_and_tag__c);
+            }
+        }
+        return codeAndTagsMap.values();
+    }
+
+       @AuraEnabled(cacheable=true)
+    public static List<CODES_AND_TAGs__c> getTagsList(string recordId){
+        return CodeAndTagsController.filterTagsByParentId(recordId);  
+    } 
+
+    @AuraEnabled(cacheable=true)
+    public static list<CODES_AND_TAGs__c> getCodesAndAssociatedTagsList(string recordId){
+        return CodeAndTagsController.getlistOfAllCodesAndTags();
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static list<CODES_AND_TAGs__c> getCodesAndTagsList(string recordId){
+        return CodeAndTagsController.getlistOfAllCodesAndTags();
+    }
+
+
+
+
+//#################################################
+
+
+     if(objectFields.contains(sObjectFieldName.toLowerCase())) {
+            string dynamicCodeAndTagsQuerry = 'SELECT id, name,allocation__c, Related_codes_and_tag__c.CODES_AND_TAG__r.id, Related_codes_and_tag__c.CODES_AND_TAG__r.name, Related_codes_and_tag__c.CODES_AND_TAG__r.parent_code_and_tag__r.Name, Related_codes_and_tag__c.CODES_AND_TAG__r.parent_code_and_tag__r.id  FROM Related_codes_and_tag__c WHERE '+sObjName+'__c =:objectId';
+
+            list<Related_codes_and_tag__c> relatedCodeAndTags = (List<Related_codes_and_tag__c>)DataBase.query(dynamicCodeAndTagsQuerry);
+
+            Map<Id,CODES_AND_TAGs__c> allCodeAndTags = new map<id,CODES_AND_TAGs__c>([SELECT id, name,parent_code_and_tag__c, Recordtype.Name FROM CODES_AND_TAGs__c  ]);
+            // loop through the relatedCodesAndTags and get the ids of the accosaited code and tag
+            // get that code and tag from allCodeAndTags map using its key
+            // check if that tag has a parent
+            //1- if : no
+            //2-      Set that tag as the grand parents.
+            //3- if : yes
+            //4-    grab that parent and store it in a local variable
+            //5- repeat step 1-4 until the grand parent is found
+        
+            for(Related_codes_and_tag__c instanceOfRelatedCodeAndTags: relatedCodeAndTags.values()){
+                if(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__r == null){
+                    grandParentRecords.put(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.id, (CODES_AND_TAGs__c)instanceOfRelatedCodeAndTags.CODES_AND_TAG__r);
+                }
+                if(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__r != null){
+                    id currentParentId = instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__r.id;
+                    do {
+                        CODES_AND_TAGs__c currentParent = allCodeAndTags.get(currentParentId);
+                        if(currentParent.id == null){
+                            grandParentRecords.put(currentParent.id, currentParent);
+                        }
+                        currentParentId = currentParent.id;
+
+                    } while (currentParentId != null);
+                }
+            }
+         }
+
+
+
+
+    //################### JS CODE 
+
+     parseCodeAndTgasListForTreeGrid(data){
+
+            // get ::: The Related codes and tag
+       
+
+        //################## get all the associated code and tags tree ###############
+            // get a map of all Related_codes_and_tag__c associated 
+            // for every instance of Related_codes_and_tag__c
+            // for all related codes and tags 
+            //      get the associated codes and tags and store them in a set
+            // get all existing code an tags
+            // for all existing codes and tags
+            //      if loop and remove from list till its empty
+            //      store the looped values
+
+
+
+
+
+        const mapIdCodeAndTags = new Map();
+        const mapCodeToAssociateTags = new Map();
+        data.map((val)=>{
+            mapIdCodeAndTags.set(val.Id, val);
+          })
+          for (let instance of mapIdCodeAndTags.values()) {
+            if(instance.related_codes_and_tag__c){
+                let parentCode= mapIdCodeAndTags.get(instance.related_codes_and_tag__c);
+                let parsableCodeInstance ={ };
+                if(parentCode){
+                    if(mapIdCodeAndTags.get(instance.related_codes_and_tag__c)){
+                        if(!mapCodeToAssociateTags.has(parentCode.id)){
+                            let subTagP = {
+                                Id:instance.Id,
+                                parentId: instance.related_codes_and_tag__c,
+                                code:instance.Name,
+                                name: instance.Id 
+                            };
+                            parsableCodeInstance.id  = parentCode.Id;
+                            parsableCodeInstance.name  = parentCode.Id;
+                            parsableCodeInstance.code  = parentCode.Name;
+                            parsableCodeInstance._children = [];
+                            parsableCodeInstance._children.push(subTagP);
+                            mapCodeToAssociateTags.set(instance.related_codes_and_tag__c, parsableCodeInstance);
+                            mapIdCodeAndTags.delete(instance.related_codes_and_tag__c);
+                            mapIdCodeAndTags.delete(instance.Id);
+                        }
+                    }
+                    continue;
+                }
+                if(mapCodeToAssociateTags.has(instance.related_codes_and_tag__c)){
+                    let subTag = {
+                        Id:instance.Id,
+                        parentId: instance.related_codes_and_tag__c,
+                        code:instance.Name,
+                        name: instance.Id 
+                    };
+                    mapCodeToAssociateTags.get(instance.related_codes_and_tag__c)._children.push(subTag);
+                }
+            }
+          }
+          return Array.from(mapCodeToAssociateTags, ([name, value]) => (value));
+    }

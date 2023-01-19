@@ -6,23 +6,16 @@
  * last-edited: 15/01/2023
  */
 import { LightningElement,wire,api, track} from 'lwc';
-import getTagsList from '@salesforce/apex/CodeAndTagsController.getTagsList';
-import getCodesAndAssociatedTagsList from '@salesforce/apex/CodeAndTagsController.getCodesAndAssociatedTagsList';
-
+import getCodeAndTagsList from '@salesforce/apex/CodeAndTagsController.getlistOfAllRelatedCodesAndTags';
+import getCodeAndTagsChildByParentId from '@salesforce/apex/CodeAndTagsController.getCodeAndTagsChildrenRecordsByParentId';
+import {getNewDataWithChildren,extractParents} from './helper';
 export default class LwcCodesAndTags extends LightningElement {
-    @track
-     codesAndAssociatedTags = [];
+    @track codesAndAssociatedTags = [];
 
-    @track
-    tagItems = [];
-
-    @track tagColumns = [
-        {
-            type: 'text',
-            fieldName: 'tag',
-            label: 'Tags',
-        },
-    ];
+    @track tagItems = [];
+    @track data;
+    @track grandParentsCodeAndTag =[];
+    parentandchildrenobj ={};
     @track codeColumns = [
         {
             type: 'text',
@@ -30,7 +23,7 @@ export default class LwcCodesAndTags extends LightningElement {
             label: 'Codes',
         },
     ];
-    selectedCodesAndTagsArray;
+    
     selectedCodesAndTags ;
 
     @api recordId;
@@ -40,96 +33,50 @@ export default class LwcCodesAndTags extends LightningElement {
 
     fecthError;
 
-    @wire(getTagsList, {
-        recordId: '$recordId' 
-    })
-    getRelatedTagsList({ error, data }) {
-        if (data) {
-            console.log('related tasg',data)
-            let fetchedTagsItemsList = [];
-            data.forEach((element,index) => {
-                fetchedTagsItemsList.push({
-                    tag: element.Name ,
-                    name: index,
-                    id:element.Id,
-                });
-            });
-            
-         this.tagItems = [...fetchedTagsItemsList] ;     
-            this.fecthError = undefined;
-        } else if (error) {
-            this.fecthError = error;
-            console.log('data error::::::::::',error); 
-        }
-    }
-
-    @wire(getCodesAndAssociatedTagsList, {
+    @wire(getCodeAndTagsList, {
         recordId: '$recordId' 
     })
     getRelatedCodesAndAssociatedTagsList({ error, data }) {
         if (data) {
+             this.data = data
              this.codesAndAssociatedTags  = this.parseCodeAndTgasListForTreeGrid(data);
             this.fecthError = undefined;
         } 
         if(error) {
             this.fecthError = error;
-            console.log( error)
+            console.log( 'Error :: ::',error.message)
             this.codesAndAssociatedTags=undefined; 
         }
     }
 
-    parseCodeAndTgasListForTreeGrid(data){
-        const mapIdCodeAndTags = new Map();
-        const mapCodeToAssociateTags = new Map();
-        data.map((val)=>{
-            mapIdCodeAndTags.set(val.Id, val);
-          })
-          for (let instance of mapIdCodeAndTags.values()) {
-            if(instance.related_codes_and_tag__c){
-                let parentCode= mapIdCodeAndTags.get(instance.related_codes_and_tag__c);
-                let parsableCodeInstance ={ };
-                if(parentCode){
-                    if(mapIdCodeAndTags.get(instance.related_codes_and_tag__c)){
-                        if(!mapCodeToAssociateTags.has(parentCode.id)){
-                            let subTagP = {
-                                Id:instance.Id,
-                                parentId: instance.related_codes_and_tag__c,
-                                code:instance.Name,
-                                name: instance.Id 
-                            };
-                            parsableCodeInstance.id  = parentCode.Id;
-                            parsableCodeInstance.name  = parentCode.Id;
-                            parsableCodeInstance.code  = parentCode.Name;
-                            parsableCodeInstance._children = [];
-                            parsableCodeInstance._children.push(subTagP);
-                            mapCodeToAssociateTags.set(instance.related_codes_and_tag__c, parsableCodeInstance);
-                            mapIdCodeAndTags.delete(instance.related_codes_and_tag__c);
-                            mapIdCodeAndTags.delete(instance.Id);
+    parseCodeAndTgasListForTreeGrid(idata){
+        let data  = JSON.parse(idata)
+        let allCodeAndTags = new Map(Object.entries(data.allCodeAndTags));
+            let grandParentRecords =  {};
+            for(const instanceOfRelatedCodeAndTags of data.relatedCodeAndTags){
+                if(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__c === undefined){
+                    let currentParent = allCodeAndTags.get(instanceOfRelatedCodeAndTags.CODES_AND_TAG__c);
+                    grandParentRecords[currentParent.Id] =  {code: currentParent.Name, id: currentParent.Id, _children:[]  };
+                }
+                if(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__r != undefined){
+                    let currentParent = allCodeAndTags.get(instanceOfRelatedCodeAndTags.CODES_AND_TAG__r.parent_code_and_tag__c);
+                    let isRoot = false;
+                    while(!isRoot){
+                        if(currentParent != undefined && currentParent.parent_code_and_tag__c == undefined){
+                            grandParentRecords[currentParent.Id] =  {code: currentParent.Name, id: currentParent.Id, _children:[]  };
+                            isRoot = true;
+                        }
+                        else{
+                            currentParent = allCodeAndTags.get(currentParent.parent_code_and_tag__c);
                         }
                     }
-                    continue;
                 }
-                if(mapCodeToAssociateTags.has(instance.related_codes_and_tag__c)){
-                    let subTag = {
-                        Id:instance.Id,
-                        parentId: instance.related_codes_and_tag__c,
-                        code:instance.Name,
-                        name: instance.Id 
-                    };
-                    mapCodeToAssociateTags.get(instance.related_codes_and_tag__c)._children.push(subTag);
-                }
-            }
-          }
-          return Array.from(mapCodeToAssociateTags, ([name, value]) => (value));
+            }    
+            this.grandParentsCodeAndTag =Object.values(grandParentRecords);
     }
 
-
     handleSelection(event){
-        this.selectedCodesAndTags= new Set();
-        this.selectedCodesAndTags.add(event.detail.selectedRows);
-        console.log(' this.selectedCodesAndTags :: :: ', this.selectedCodesAndTags)
-        this.selectedCodesAndTagsArray = this.selectedCodesAndTags;
-       
+       this.parentandchildrenobj = extractParents(event.detail.selectedRows, JSON.parse(this.data));
     }
 
     toggleNext(){
@@ -138,8 +85,26 @@ export default class LwcCodesAndTags extends LightningElement {
     togglePrevious(){
         this.moveToNext = false;
     }
+    handleRowToggle(event) {
+        let newChildren = [];
+        getCodeAndTagsChildByParentId({ recordId: event.detail.row.id })
+            .then(data=>{
+                newChildren =  data.map(instance =>{
+                    return {code: instance.Name, id: instance.Id, _children:[], parentId: instance.parent_code_and_tag__c }
+                });
+                const rowId = event.detail.row.id;
+                const hasChildrenContent = event.detail.hasChildrenContent;
+         
+                if (!hasChildrenContent) {
+                    this.grandParentsCodeAndTag = getNewDataWithChildren(rowId, this.grandParentsCodeAndTag, newChildren);
+                }
+            })
+            .catch(err=>console.log('Error :: ::',JSON.stringify(err.message)))
+
+           
+    }
 
     get isSelectAndNotNext(){
-        return this.selectedCodesAndTags && !this.moveToNext
+        return Object.keys(this.parentandchildrenobj).length>0 && !this.moveToNext
     }
-}
+} 

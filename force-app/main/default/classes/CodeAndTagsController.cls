@@ -3,42 +3,39 @@
  * organisation: Hi Corp
  * email: ngumbukafon@gmail.com
  * created-on: 13/01/2023
- * last edited: 14/01/2023
+ * last edited: 17/01/2023
  * Description:  Gets and return tags and codes
  */
 
 public without sharing class CodeAndTagsController {
-
-    @AuraEnabled(cacheable=true)
-    public static List<CODES_AND_TAGs__c> getTagsList(string recordId){
-        return CodeAndTagsController.filterTagsByParentId(recordId);  
-    } 
-
-    @AuraEnabled(cacheable=true)
-    public static list<CODES_AND_TAGs__c> getCodesAndAssociatedTagsList(string recordId){
-        return CodeAndTagsController.getlistOfAllCodesAndTags();
+    public class CodeAndTagsAndRelatedList{
+        public Map<Id,CODES_AND_TAGs__c> allCodeAndTags;
+        public list<Related_codes_and_tag__c> relatedCodeAndTags;
     }
 
-
-    public static List<CODES_AND_TAGs__c>  getlistOfAllCodesAndTags(){
-        return [SELECT id,name,related_codes_and_tag__c FROM CODES_AND_TAGs__c];
-    }
-    
-    private static list<CODES_AND_TAGs__c> filterTagsByParentId(string recordID){
+    @AuraEnabled(cacheable=true)
+    public static string  getlistOfAllRelatedCodesAndTags(string recordId){
         id objectId = recordID;
         String sObjName = objectId.getSObjectType().getDescribe().getName();
-        Set<String> objectFields = Schema.SObjectType.CODES_AND_TAGs__c.fields.getMap().keySet();
-        Map<Id,CODES_AND_TAGs__c> codeAndTagsMap = new Map<Id,CODES_AND_TAGs__c>();
+        Set<String> objectFields = Schema.SObjectType.Related_codes_and_tag__c.fields.getMap().keySet();
+        CodeAndTagsAndRelatedList associatedCodeAndTags = new CodeAndTagsAndRelatedList();
         string sObjectFieldName = sObjName+'__c';
+        Map<Id,CODES_AND_TAGs__c> grandParentRecords = new Map<Id,CODES_AND_TAGs__c> ();
+        
         if(objectFields.contains(sObjectFieldName.toLowerCase())) {
-            string dynamicCodeAndTagsQuerry = 'SELECT id,name,related_codes_and_tag__c FROM CODES_AND_TAGs__c WHERE '+sObjName+'__c =:objectId';
-            list<CODES_AND_TAGs__c> codeAndTagsList = (List<CODES_AND_TAGs__c>)DataBase.query(dynamicCodeAndTagsQuerry);
+            string dynamicCodeAndTagsQuerry = 'SELECT id, name,allocation__c, Related_codes_and_tag__c.CODES_AND_TAG__r.id, Related_codes_and_tag__c.CODES_AND_TAG__r.name, Related_codes_and_tag__c.CODES_AND_TAG__r.parent_code_and_tag__r.Name, Related_codes_and_tag__c.CODES_AND_TAG__r.parent_code_and_tag__r.id  FROM Related_codes_and_tag__c WHERE '+sObjName+'__c =:objectId';
 
-            codeAndTagsMap = new map<id,CODES_AND_TAGs__c>(codeAndTagsList);
-            for(CODES_AND_TAGs__c instance : codeAndTagsMap.values()){
-                codeAndTagsMap.remove(instance.related_codes_and_tag__c);
-            }
-        }
-        return codeAndTagsMap.values();
+            list<Related_codes_and_tag__c> relatedCodeAndTags = (List<Related_codes_and_tag__c>)DataBase.query(dynamicCodeAndTagsQuerry);
+            Map<Id,CODES_AND_TAGs__c> allCodeAndTags = new map<id,CODES_AND_TAGs__c>([SELECT id, name,parent_code_and_tag__c FROM CODES_AND_TAGs__c  ]);
+
+            associatedCodeAndTags.allCodeAndTags = allCodeAndTags;
+            associatedCodeAndTags.relatedCodeAndTags = relatedCodeAndTags;
+         }
+        return JSON.serialize(associatedCodeAndTags);
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static list<CODES_AND_TAGs__c> getCodeAndTagsChildrenRecordsByParentId(string recordId){
+        return [SELECT id, name,parent_code_and_tag__c FROM CODES_AND_TAGs__c WHERE  parent_code_and_tag__c = :recordId ];
     }
 }
