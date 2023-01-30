@@ -1,26 +1,43 @@
 <template>
     <article class="slds-card">
-        <c-lwc-codes-and-tags-percent parentandchildrenobj={parentandchildrenobj} if:true={moveToNext}>
+        <c-lwc-codes-and-tags-percent issaved={renderFieldNotEditable} onsavecodeandtags={validateForSave} parentandchildrenobj={parentandchildrenobj} if:true={moveToNext}>
         </c-lwc-codes-and-tags-percent>
         <lightning-tabset if:false={moveToNext}>
-            <lightning-tab label="Codes">
+            <lightning-tab label="Codes"  if:false={hasSavedCodeAndTags}>
                 <div class="slds-m-top_medium slds-m-bottom_x-large">
                     <div class="slds-p-around_medium lgc-bg">
                         <lightning-tree-grid data={grandParentsCodeAndTag}
                             columns={codeColumns}
                             key-field="code"
-                            ontoggle={handleRowToggle}
                             onrowselection={handleSelection}>
                         </lightning-tree-grid>
                     </div>
                 </div>
             </lightning-tab>
+            <template if:true={hasSavedCodeAndTags} for:each={listOfCodeAndTags} for:item="parentcodeandtag">
+                <div class="slds-form slds-border_bottom"  key={parentcodeandtag.id}>
+                    <legend class="slds-form-element__legend slds-text-title--caps slds-form-element__label slds-p-left_small">{parentcodeandtag.code}</legend>
+                    <fieldset class="slds-form-element slds-p-around_medium slds-form-element_stacked">
+                        <div class="slds-form slds-box slds-theme_shade">
+                            <template  for:each={parentcodeandtag._children} for:item="codeandtag">
+                                <div class="slds-form-element slds-form-element_horizontal" key={codeandtag.id}>
+                                    <label class="slds-form-element__label" for="horizontal-input-id-01">{codeandtag.code}</label>
+                                    <div class="slds-form-element__control">
+                                        <input data-instanceid = {codeandtag.id} data-parentcodeandtag={parentcodeandtag.id} type="number" value={codeandtag.allocation} placeholder="Investment Percentile" readonly class="slds-input" onkeyup={handleChange}/>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </fieldset>
+                </div>
+            </template>
         </lightning-tabset>
         <div class="slds-button-group" role="group">
-            <button if:true={isSelectAndNotNext} onclick={toggleNext}
-                class="slds-button slds-button_brand">Next</button>
-            <button if:true={moveToNext} onclick={togglePrevious}
-                class="slds-button slds-button_neutral">Previous</button>
+            <button if:true={isSelectAndNotNext} onclick={toggleNext} class="slds-button slds-button_brand">Next</button>
+            <button if:true={moveToNext} onclick={togglePrevious} class="slds-button slds-button_neutral">Previous</button>
+            <button if:true={recordIsSavable} onclick={handleSave} class="slds-button slds-button_brand">Save</button>
+            <button if:true={hasSavedCodeAndTags} onclick={handledEditSaved} class="slds-button slds-button_brand">Edit Saved</button>
         </div>
     </article>
+ 
 </template>

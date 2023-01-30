@@ -1,61 +1,64 @@
-function getNewDataWithChildren(rowId, data, children){
-    return data.map(function(row) {
-        let hasChildrenContent = false;
-        if (row.hasOwnProperty('_children') && Array.isArray(row._children) && row._children.length > 0) {
-            hasChildrenContent = true;
+function extractParents(selectedCodeAndTag, allCodeAndTags){
+    try {
+        let parentAndChildrenSubject = {};
+        selectedCodeAndTag.map((instance)=>{
+                if(!instance['hasChildren']){
+                    let ancestor  = getAncestor(instance,allCodeAndTags)
+                    let newId = ancestor['Id'] != undefined ? ancestor['Id'] : ancestor['id'];
+                    if(parentAndChildrenSubject[newId] === undefined){
+                        parentAndChildrenSubject[newId] = {code: ancestor['Name'] != undefined ? ancestor['Name'] : ancestor['code'] ,id:newId };
+                    }
+                    if(parentAndChildrenSubject[newId]._children === undefined){
+                        parentAndChildrenSubject[newId]._children = [instance];
+                    }else{
+                        parentAndChildrenSubject[newId]._children.push(instance);
+                    }
+                }
+            });
+        return parentAndChildrenSubject;
+    } catch (error) {
+        console.log(error.message)
+    }
+}
+
+
+
+function generateGenialogicalBranch(ancestors, allCodeAndTags){
+    ancestors.forEach((instance, index) => {
+        let children = [];
+        for(const key in allCodeAndTags){
+            if(allCodeAndTags[key]['parent_code_and_tag__c'] === instance.id){
+                children.push({code: allCodeAndTags[key]['Name'], id: allCodeAndTags[key]['Id'], parentId:allCodeAndTags[key]['parent_code_and_tag__c']})
+            }
         }
-        if (row.id === rowId) {
-            row._children = children;
-        } else if (!row.hasChildrenContent) {
-            getNewDataWithChildren(rowId, row._children, children);
-        }
-        return row;
+       if(children.length>0) {
+            ancestors[index]['_children'] = [...children]
+            generateGenialogicalBranch(ancestors[index]['_children'], allCodeAndTags)
+       }
     });
 }
 
-function extractParents(selectedCodeAndTag, data){
-    let parentAndChildrenSubject = {};
-    let allCodeAndTags = data.allCodeAndTags;
-    selectedCodeAndTag.map(instance=>{
-      let ancestor =   getAncestor(instance, allCodeAndTags);
-      parentAndChildrenSubject[ancestor.Id] = ancestor;
-      if(parentAndChildrenSubject[ancestor.Id]['_children'] === undefined){
-        parentAndChildrenSubject[ancestor.Id]['_children'] = [instance];
-      }else{
-        parentAndChildrenSubject[ancestor.Id]['_children'].push(instance);
-      }
-      
-    })
-    return parentAndChildrenSubject;
-}
-
 function getAncestor(instance, allCodeAndTags){
-    if(instance.parentId === undefined){
+    if(instance['parentId'] === undefined && instance['parent_code_and_tag__c'] === undefined){
         return instance;
     }
-    if(instance.parentId != undefined){
-        let newInstance = instance;
-        newInstance.parent_code_and_tag__c = instance.parentId;
-        while(newInstance.parentId != undefined || newInstance.parent_code_and_tag__c != undefined){
-            let newId = newInstance.parentId != undefined ? newInstance.parentId : newInstance.parent_code_and_tag__c;
-            newInstance = allCodeAndTags[newId];
+    let newId = instance['parentId'] != undefined ? instance['parentId'] : instance['parent_code_and_tag__c'];
+    return  getAncestor(allCodeAndTags[newId], allCodeAndTags);
+}
+
+function extractAndParseSavedParentsAndChildren(savedInstance,allCodeAndTags){
+    let savedInstanceID = savedInstance['CODES_AND_TAG__r']['Id'];
+    if(savedInstanceID != undefined){
+        let newParsedInstance = {
+            Name: savedInstance['CODES_AND_TAG__r']['Name'],
+            Id: savedInstanceID,
+            parentId: savedInstance['CODES_AND_TAG__r']['parent_code_and_tag__c']
         }
-        return newInstance;
+        return getAncestor(newParsedInstance, allCodeAndTags)
     }
 }
 
 
-export {getNewDataWithChildren, extractParents};
 
 
-
-  
-    /**
-     * {
-     *      parent: {}
-     *      children:{} 
-     *  }
-     * 
-     * 
- Selected codes and tags ::  [{"code":"50 shades","id":"a03Dn000002e1kPIAQ","parentId":"a03Dn000002e8SSIAY","level":2,"posInSet":2,"setSize":2,"isExpanded":true,"hasChildren":true},{"code":"test manual approval","id":"a03Dn000002e308IAA","parentId":"a03Dn000002e1kPIAQ","level":3,"posInSet":1,"setSize":1,"isExpanded":false,"hasChildren":true}]
-*/
+export {extractParents, generateGenialogicalBranch,extractAndParseSavedParentsAndChildren};

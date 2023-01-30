@@ -7,21 +7,54 @@
                         <svg class="slds-icon slds-icon_small" aria-hidden="true">
                             <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
                         </svg>
-                        <span class="slds-assistive-text">{objectname}</span>
+                        <!-- <span class="slds-assistive-text">{objectname}</span> -->
                     </span>
-                </div>
-                <div class="slds-media__body">
-                    <h2 class="slds-card__header-title">
-                        <a href="#" class="slds-card__header-link slds-truncate" title="Accounts">
-                            <span>{objectname}</span>
-                        </a>
-                    </h2>
                 </div>
             </header>
         </div>
         <div class="slds-card__body slds-card__body_inner">
-            <strong>number of parents :</strong> {parentCount} <br>
-            <strong>number of Children : </strong>{childCount} 
+            <template if:false={issaved} for:each={listOfCodeAndTags} for:item="parentcodeandtag">
+                <div class="slds-form slds-border_bottom"  key={parentcodeandtag.id}>
+                    <legend class="slds-form-element__legend slds-text-title--caps slds-form-element__label slds-p-left_small">{parentcodeandtag.code}</legend>
+                    <fieldset class="slds-form-element slds-p-around_medium slds-form-element_stacked">
+                        <div class="slds-form ">
+                            <template  for:each={parentcodeandtag._children} for:item="codeandtag">
+                                <div class="slds-form-element slds-form-element_horizontal" key={codeandtag.id}>
+                                    <label class="slds-form-element__label" for="horizontal-input-id-01">{codeandtag.code}</label>
+                                    <div class="slds-form-element__control">
+                                        <input data-instanceid = {codeandtag.id} data-parentcodeandtag={parentcodeandtag.id} type="number" value={codeandtag.allocation} placeholder="Investment Percentile" readonly={codeandtag.readonly}  class="slds-input slds-box" onkeyup={handleChange}/>
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="slds-form-element slds-form-element_horizontal" >
+                                <label class="slds-form-element__label" for="horizontal-input-id-01">Total</label>
+                                <div class="slds-form-element__control">
+                                    <lightning-icon if:true={parentcodeandtag.isCorrectAllocation} icon-name="action:approval" alternative-text="Correct" title="Correct"></lightning-icon>
+                                    <lightning-icon if:false={parentcodeandtag.isCorrectAllocation} variant="Error" icon-name="action:close" alternative-text="Rejected" title="Rejected"></lightning-icon>
+                                    <strong class="slds-p-around_medium">{parentcodeandtag.count} (%)</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            </template>
+            <template if:true={issaved} for:each={listOfCodeAndTags} for:item="parentcodeandtag">
+                <div class="slds-form slds-border_bottom"  key={parentcodeandtag.id}>
+                    <legend class="slds-form-element__legend slds-text-title--caps slds-form-element__label slds-p-left_small">{parentcodeandtag.code}</legend>
+                    <fieldset class="slds-form-element slds-p-around_medium slds-form-element_stacked">
+                        <div class="slds-form slds-box slds-theme_shade">
+                            <template  for:each={parentcodeandtag._children} for:item="codeandtag">
+                                <div class="slds-form-element slds-form-element_horizontal" key={codeandtag.id}>
+                                    <label class="slds-form-element__label" for="horizontal-input-id-01">{codeandtag.code}</label>
+                                    <div class="slds-form-element__control">
+                                        <input data-instanceid = {codeandtag.id} data-parentcodeandtag={parentcodeandtag.id} type="number" value={codeandtag.allocation} placeholder="Investment Percentile" readonly class="slds-input" onkeyup={handleChange}/>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </fieldset>
+                </div>
+            </template>
         </div>
     </article>
 </template>
